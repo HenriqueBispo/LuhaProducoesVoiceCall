@@ -3,7 +3,4 @@
     <Say voice="Polly.Joanna-Generative">
         Thanks for trying our documentation. Enjoy!
     </Say>
-    <Play>
-        https://github.com/Growt-Brand/LigacaoAudioAutomacao/raw/refs/heads/main/sitesGrowthBrand.waptt%20(mp3cut.net).mp3
-    </Play>
 </Response>
