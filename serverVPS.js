@@ -2,14 +2,15 @@ import express from "express";
 import twilio from "twilio";
 import dotenv from "dotenv";
 import path from "path";
-import axios from "axios"
 import { fileURLToPath } from "url";
+import fs from "fs";
+import https from "https";
 
 dotenv.config();
 
 const accountSid = process.env.SID_TWILIO;
 const authToken = process.env.TOKEN_TWILIO;
-const PORT = process.env.PORT || 8080;
+const PORT = 443;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,11 +24,7 @@ const client = twilio(accountSid, authToken);
 
 app.all("/twiml-audio", (req, res) => {
   try {
-    const audioUrl = req.query.audioUrl;
-
-    if (!audioUrl) {
-      return res.status(400).send("audioUrl não fornecida");
-    }
+    const audioUrl = `https://145.223.94.117/audios/audioTeste.mp3`;
 
     res.type("text/xml");
     res.send(`
@@ -35,30 +32,24 @@ app.all("/twiml-audio", (req, res) => {
         <Play>${audioUrl}</Play>
       </Response>
     `);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, error: error.message });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
 app.post("/call-voice", async (req, res) => {
-  const { to, from, audioUrl } = req.body;
-
-  if (!to || !from || !audioUrl) {
-    return res.status(400).json({
-      error: "Campos obrigatórios: to, from, audioUrl"
-    });
-  }
+  const { to, from } = req.body;
+  if (!to || !from) return res.status(400).json({ error: "Campos obrigatórios: to, from" });
 
   try {
     const call = await client.calls.create({
       to,
       from,
-      url: `http://localhost:8080/twiml-audio?audioUrl=${encodeURIComponent(audioUrl)}`
+      url: `https://145.223.94.117/twiml-audio`,
     });
 
     return res.json({ success: true, callSid: call.sid });
-
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, error: err.message });
@@ -67,7 +58,6 @@ app.post("/call-voice", async (req, res) => {
 
 app.post("/call-text", async (req, res) => {
   const { to, from, message } = req.body;
-
   if (!to || !from || !message) return res.status(400).json({ error: "Campos obrigatórios: to, from, message" });
 
   try {
@@ -90,29 +80,9 @@ app.post("/call-text", async (req, res) => {
   }
 });
 
-app.post("/sendTextWhatsApp", async (req, res) => {
-  const { to, instancia, token, ClientToken, message } = req.body;
-
-  console.log(to, instancia, token, ClientToken, message);
-  
-  const response = await axios.post(`https://api.z-api.io/instances/${instancia}/token/${token}/send-text`, {
-    phone: to,
-    message: message
-  }, 
-  { 
-        headers: {
-            "client-token": ClientToken
-        } 
-    }
-)
-
-console.log(response.data)
-
-const result = res.data
-
-return res.json({ success: true, result: result });
-})
-
-app.listen(PORT, () => {
-  console.log(`Server rodando em http://localhost:${PORT}`);
+https.createServer({
+  key: fs.readFileSync("/root/ssl/key.pem"),
+  cert: fs.readFileSync("/root/ssl/cert.pem"),
+}, app).listen(443, () => {
+  console.log(`Servidor HTTPS rodando em https://145.223.94.117`);
 });
